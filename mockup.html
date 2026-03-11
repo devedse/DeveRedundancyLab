@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400, initial-scale=1.0">
+<title>Deve Disk Recovery Simulator — Interactive Mockup</title>
+<style>
+  /* ── Reset & Base ───────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #242836;
+    --border: #2e3345; --text: #e2e4ed; --text-dim: #8a8fa8;
+    --accent: #6c5ce7; --accent-glow: #a29bfe;
+    --danger: #ff4757; --warning: #ffa502; --success: #2ed573;
+    --info: #1e90ff; --purple: #8b5cf6;
+    --parity-tint: rgba(108,92,231,0.15);
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  html { font-size: 14px; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 1.15rem; font-weight: 700; letter-spacing: -.3px;
+    background: linear-gradient(135deg, var(--accent-glow), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .badge {
+    font-size: .7rem; padding: 3px 8px; border-radius: 20px;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .btn-icon {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-dim); font-size: 1rem;
+    display: grid; place-items: center; transition: all .15s;
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent-glow); }
+
+  /* ── Main Layout ────────────────────────────────────────── */
+  .main { display: flex; height: calc(100vh - 53px); }
+
+  /* ── Left: Image Library ────────────────────────────────── */
+  .library {
+    width: 180px; min-width: 180px; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    padding: 12px;
+  }
+  .library h2 {
+    font-size: .75rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-dim); margin-bottom: 12px;
+  }
+  .image-card {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; padding: 8px; margin-bottom: 10px;
+    cursor: grab; transition: all .2s; position: relative;
+  }
+  .image-card:hover { border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(108,92,231,.25); }
+  .image-card.dragging { opacity: .5; transform: scale(.95); }
+  .image-card canvas { display: block; margin: 0 auto 6px; border-radius: 4px;
+    image-rendering: pixelated; }
+  .image-card .label {
+    font-size: .7rem; text-align: center; color: var(--text-dim);
+  }
+  .drag-hint {
+    font-size: .65rem; color: var(--text-dim); text-align: center;
+    margin-top: auto; padding-top: 12px; line-height: 1.4;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Center ─────────────────────────────────────────────── */
+  .center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Config Bar ─────────────────────────────────────────── */
+  .config-bar {
+    display: flex; align-items: center; gap: 16px; padding: 10px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .config-group { display: flex; align-items: center; gap: 6px; }
+  .config-group label {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--text-dim); white-space: nowrap;
+  }
+  .config-group select, .config-group input[type=number] {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 10px; border-radius: 6px;
+    font-size: .8rem; font-family: var(--mono);
+  }
+  .config-group select { padding-right: 24px; }
+  .config-group input[type=number] { width: 52px; text-align: center; }
+  .config-group select:focus, .config-group input:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(108,92,231,.25);
+  }
+  .speed-slider { width: 80px; accent-color: var(--accent); }
+  .btn-sm {
+    padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: .75rem;
+    font-weight: 600; transition: all .15s;
+  }
+  .btn-sm:hover { border-color: var(--accent); background: rgba(108,92,231,.15); }
+  .btn-sm.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-gf {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--purple);
+    background: rgba(139,92,246,.1); color: var(--purple); font-size: .75rem;
+    font-weight: 600; margin-left: auto; transition: all .15s;
+  }
+  .btn-gf:hover { background: rgba(139,92,246,.25); }
+
+  /* ── Volume Preview ──────────────────────────────────────── */
+  .volume-preview {
+    display: flex; align-items: center; gap: 20px; padding: 12px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .volume-preview.hidden { display: none; }
+  .preview-card {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .preview-card .preview-label {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  .preview-card canvas {
+    border-radius: 6px; image-rendering: pixelated;
+    border: 2px solid var(--border); transition: border-color .3s;
+  }
+  .preview-card canvas.damaged {
+    border-color: var(--danger);
+    box-shadow: 0 0 12px rgba(255,71,87,.25);
+  }
+  .preview-card canvas.perfect {
+    border-color: var(--success);
+    box-shadow: 0 0 8px rgba(46,213,115,.15);
+  }
+  .preview-arrow {
+    font-size: 1.2rem; color: var(--text-dim);
+  }
+  .preview-diff {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 8px 14px; background: var(--surface2); border-radius: 8px;
+    font-size: .7rem; font-family: var(--mono);
+  }
+  .preview-diff .diff-ok { color: var(--success); }
+  .preview-diff .diff-warn { color: var(--warning); }
+  .preview-diff .diff-err { color: var(--danger); }
+
+  /* ── Disk Array ─────────────────────────────────────────── */
+  .disk-area {
+    flex: 1; padding: 20px; overflow: auto; position: relative;
+  }
+  .disk-area-inner {
+    display: flex; gap: 16px; justify-content: center; min-height: 100%;
+    align-items: flex-start; padding-top: 10px;
+  }
+  .drop-zone {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; pointer-events: none; opacity: 0;
+    transition: opacity .3s;
+  }
+  .drop-zone.active { opacity: 1; pointer-events: all;
+    background: rgba(108,92,231,.08); }
+  .drop-zone-inner {
+    border: 2px dashed var(--accent); border-radius: 16px;
+    padding: 40px 60px; text-align: center;
+  }
+  .drop-zone-inner .icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .drop-zone-inner p { color: var(--text-dim); font-size: .85rem; }
+
+  /* ── Disk Column ────────────────────────────────────────── */
+  .disk-col {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; min-width: 130px; overflow: hidden;
+    transition: all .3s; position: relative;
+  }
+  .disk-col.failed { border-color: var(--danger);
+    box-shadow: 0 0 20px rgba(255,71,87,.15); }
+  .disk-col.failed .disk-pixels { opacity: .2; filter: grayscale(1); }
+  .disk-col.failed::after {
+    content: '✕'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); font-size: 4rem; color: var(--danger);
+    opacity: .4; pointer-events: none;
+  }
+  .disk-col.rebuilding { border-color: var(--info);
+    box-shadow: 0 0 20px rgba(30,144,255,.2); }
+  .disk-col.corrupted { border-color: var(--purple);
+    box-shadow: 0 0 20px rgba(139,92,246,.2); }
+
+  .disk-header {
+    padding: 10px 12px; text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .disk-header .disk-name { font-size: .85rem; font-weight: 700; }
+  .disk-header .disk-role {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .disk-header .disk-role.data { color: var(--success); }
+  .disk-header .disk-role.parity { color: var(--accent-glow); }
+  .disk-header .disk-role.mixed { color: var(--warning); }
+  .disk-status {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .disk-status.healthy { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .disk-status.failed { background: var(--danger); box-shadow: 0 0 6px var(--danger); animation: pulse-danger 1.5s infinite; }
+  .disk-status.rebuilding { background: var(--info); animation: pulse-info 1s infinite; }
+  .disk-status.corrupted { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+
+  @keyframes pulse-danger { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  @keyframes pulse-info { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+  .disk-pixels { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .stripe-group { display: flex; flex-direction: column; gap: 1px;
+    padding: 4px; border-radius: 6px; position: relative; }
+  .stripe-group.parity-stripe { background: var(--parity-tint); }
+  .stripe-group .stripe-label {
+    font-size: .55rem; color: var(--text-dim); margin-bottom: 2px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .pixel-row { display: flex; gap: 1px; }
+  .pixel {
+    width: 22px; height: 22px; border-radius: 3px;
+    transition: all .15s; position: relative; cursor: crosshair;
+  }
+  .pixel:hover { transform: scale(1.35); z-index: 10;
+    box-shadow: 0 0 10px rgba(255,255,255,.4); }
+  .pixel.highlighted {
+    box-shadow: 0 0 0 2px #fff, 0 0 12px rgba(255,255,255,.5);
+    transform: scale(1.25); z-index: 5;
+  }
+  .pixel.parity { border: 1px solid rgba(108,92,231,.5); }
+  .pixel.corrupted-px::after {
+    content: '⚡'; position: absolute; inset: 0; display: grid;
+    place-items: center; font-size: .6rem;
+  }
+
+  .disk-actions {
+    display: flex; gap: 4px; padding: 8px; border-top: 1px solid var(--border);
+    justify-content: center; flex-wrap: wrap;
+  }
+  .disk-btn {
+    padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); font-size: .65rem; color: var(--text-dim);
+    transition: all .15s; white-space: nowrap;
+  }
+  .disk-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .disk-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  .disk-btn.warn:hover { border-color: var(--warning); color: var(--warning); }
+  .disk-btn.success:hover { border-color: var(--success); color: var(--success); }
+  .disk-btn.info:hover { border-color: var(--info); color: var(--info); }
+
+  /* ── Rebuild sweep ──────────────────────────────────────── */
+  .rebuild-sweep {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 4px; background: linear-gradient(90deg, transparent, var(--info), transparent);
+    animation: sweep 2s ease-in-out infinite;
+  }
+  @keyframes sweep { 0% { top:44px; } 100% { top:100%; } }
+
+  /* ── Math Inspector ─────────────────────────────────────── */
+  .inspector {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 14px 24px; min-height: 140px; transition: all .3s;
+  }
+  .inspector-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .inspector-header h3 {
+    font-size: .8rem; font-weight: 700; color: var(--accent-glow);
+  }
+  .inspector-header .pin-btn {
+    font-size: .7rem; padding: 2px 8px; border-radius: 4px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); transition: all .15s;
+  }
+  .inspector-header .pin-btn.pinned { background: var(--accent);
+    border-color: var(--accent); color: #fff; }
+  .inspector-body { display: flex; gap: 24px; }
+  .formula-block {
+    flex: 1; background: var(--surface2); border-radius: 8px;
+    padding: 12px 16px; font-family: var(--mono); font-size: .8rem;
+    line-height: 1.8; overflow-x: auto;
+  }
+  .formula-block .op { color: var(--accent-glow); font-weight: 700; }
+  .formula-block .val { color: var(--success); }
+  .formula-block .result { color: var(--warning); font-weight: 700; }
+  .formula-block .label-sm {
+    font-size: .6rem; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 4px; display: block;
+    font-family: var(--font);
+  }
+  .binary-block {
+    min-width: 260px; background: var(--surface2); border-radius: 8px;
+    padding: 12px 16px; font-family: var(--mono); font-size: .75rem;
+    line-height: 2;
+  }
+  .binary-block .bit { display: inline-block; width: 12px; text-align: center; }
+  .binary-block .bit.flip { color: var(--danger); font-weight: 700;
+    text-decoration: underline; }
+  .color-swatch {
+    display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+    vertical-align: middle; margin-left: 6px; border: 1px solid rgba(255,255,255,.2);
+  }
+
+  /* ── SVG Connection Lines ───────────────────────────────── */
+  .connections-svg {
+    position: absolute; inset: 0; pointer-events: none; z-index: 20;
+  }
+  .conn-line {
+    stroke-width: 2; fill: none; opacity: .7;
+    stroke-dasharray: 6 4; animation: dash .8s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -10; } }
+
+  /* ── Pixel fly animation ────────────────────────────────── */
+  .flying-pixel {
+    position: fixed; border-radius: 3px; z-index: 100;
+    pointer-events: none; transition: none;
+  }
+
+  /* ── Cosmic ray effect ──────────────────────────────────── */
+  @keyframes zap {
+    0% { filter: brightness(1); }
+    15% { filter: brightness(5) hue-rotate(90deg); }
+    30% { filter: brightness(1); }
+    45% { filter: brightness(3) hue-rotate(-60deg); }
+    60% { filter: brightness(1); }
+  }
+  .zapping { animation: zap .4s ease-out; }
+
+  /* ── Tooltip ────────────────────────────────────────────── */
+  .tooltip {
+    position: fixed; padding: 6px 10px; background: #000; color: #fff;
+    font-size: .7rem; font-family: var(--mono); border-radius: 6px;
+    pointer-events: none; z-index: 200; white-space: pre;
+    box-shadow: 0 4px 16px rgba(0,0,0,.5); opacity: 0;
+    transition: opacity .15s;
+  }
+  .tooltip.visible { opacity: 1; }
+
+  /* ── GF Explorer Modal ──────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    z-index: 500; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; width: 700px; max-height: 80vh; overflow: auto;
+    padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent-glow); }
+  .gf-calc { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .gf-calc input {
+    width: 70px; padding: 6px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-family: var(--mono); text-align: center;
+  }
+  .gf-calc select {
+    padding: 6px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+  }
+  .gf-calc .gf-result {
+    padding: 6px 14px; background: rgba(46,213,115,.1);
+    border: 1px solid var(--success); border-radius: 6px;
+    color: var(--success); font-family: var(--mono); font-weight: 700;
+  }
+  .gf-table-wrap { max-height: 320px; overflow: auto; border-radius: 8px;
+    border: 1px solid var(--border); }
+  .gf-table { border-collapse: collapse; font-size: .55rem; font-family: var(--mono); }
+  .gf-table td, .gf-table th {
+    width: 22px; height: 18px; text-align: center;
+    border: 1px solid rgba(255,255,255,.04);
+  }
+  .gf-table th { background: var(--surface2); color: var(--text-dim);
+    position: sticky; top: 0; z-index: 2; }
+  .gf-table th:first-child { left: 0; z-index: 3; }
+  .gf-table td:first-child { position: sticky; left: 0; background: var(--surface2);
+    color: var(--text-dim); z-index: 1; }
+  .close-modal {
+    position: absolute; top: 16px; right: 16px; background: none;
+    border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer;
+  }
+
+  /* ── Status Bar ─────────────────────────────────────────── */
+  .status-bar {
+    display: flex; align-items: center; gap: 16px; padding: 6px 24px;
+    background: var(--surface2); border-top: 1px solid var(--border);
+    font-size: .7rem; color: var(--text-dim);
+  }
+  .status-bar .status-dot { width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-right: 4px; }
+  .status-bar .status-dot.ok { background: var(--success); }
+  .status-bar .status-dot.warn { background: var(--warning); }
+  .status-bar .status-dot.err { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────────────────── -->
+<header class="header">
+  <h1>💽 Deve Disk Recovery Simulator</h1>
+  <div class="header-actions">
+    <span class="badge">INTERACTIVE MOCKUP</span>
+    <button class="btn-icon" title="Help" onclick="alert('Drag an image from the left panel onto the disk area.\nHover pixels to see math.\nUse disk buttons to simulate failures.')">?</button>
+  </div>
+</header>
+
+<!-- ─── MAIN ────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- ─── Image Library ───────────────────────────────── -->
+  <aside class="library" id="library">
+    <h2>📁 Images</h2>
+    <div id="imageCards"></div>
+    <div class="drag-hint">
+      ⬆ Drag an image<br>onto the disk area<br>to distribute pixels
+    </div>
+  </aside>
+
+  <!-- ─── Center Panel ────────────────────────────────── -->
+  <div class="center">
+
+    <!-- Config Bar -->
+    <div class="config-bar">
+      <div class="config-group">
+        <label>Algorithm</label>
+        <select id="cfgAlgo" onchange="onConfigChange()">
+          <option value="raid5">RAID 5</option>
+          <option value="raid6">RAID 6</option>
+          <option value="rs">Reed-Solomon</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Data Disks</label>
+        <input type="number" id="cfgData" value="3" min="2" max="12" onchange="onConfigChange()">
+      </div>
+      <div class="config-group">
+        <label>Parity Disks</label>
+        <input type="number" id="cfgParity" value="1" min="1" max="4" onchange="onConfigChange()">
+      </div>
+      <div class="config-group">
+        <label>Checksum</label>
+        <select id="cfgChecksum">
+          <option value="none">None</option>
+          <option value="xor8">XOR-8</option>
+          <option value="crc8" selected>CRC-8</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Speed</label>
+        <input type="range" class="speed-slider" id="cfgSpeed" value="2" min="0.5" max="4" step="0.5">
+      </div>
+      <button class="btn-sm active" id="btnAnimate" onclick="toggleAnimate()">▶ Animate</button>
+      <button class="btn-gf" onclick="openGF()">🔬 GF Explorer</button>
+    </div>
+
+    <!-- Volume Preview -->
+    <div class="volume-preview hidden" id="volumePreview">
+      <div class="preview-card">
+        <span class="preview-label">📥 Original</span>
+        <canvas id="previewOriginal" width="8" height="8"></canvas>
+      </div>
+      <div class="preview-arrow">→</div>
+      <div class="preview-card">
+        <span class="preview-label">💽 On Disk (Data)</span>
+        <canvas id="previewDisk" width="8" height="8"></canvas>
+      </div>
+      <div class="preview-arrow">→</div>
+      <div class="preview-card">
+        <span class="preview-label">🔧 Reconstructed</span>
+        <canvas id="previewRecon" width="8" height="8"></canvas>
+      </div>
+      <div class="preview-diff" id="previewDiff">
+        <span class="diff-ok">✓ All pixels match</span>
+      </div>
+    </div>
+
+    <!-- Disk Array -->
+    <div class="disk-area" id="diskArea">
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-inner">
+          <div class="icon">📀</div>
+          <p>Drop image here to distribute to disks</p>
+        </div>
+      </div>
+      <div class="disk-area-inner" id="diskContainer"></div>
+      <svg class="connections-svg" id="connSvg"></svg>
+    </div>
+
+    <!-- Math Inspector -->
+    <div class="inspector" id="inspector">
+      <div class="inspector-header">
+        <h3>🔍 Math Inspector</h3>
+        <button class="pin-btn" id="pinBtn" onclick="togglePin()">📌 Pin</button>
+        <span style="flex:1"></span>
+        <span style="font-size:.7rem;color:var(--text-dim)" id="inspectorHint">Hover a pixel to inspect</span>
+      </div>
+      <div class="inspector-body" id="inspectorBody">
+        <div class="formula-block" id="formulaBlock">
+          <span class="label-sm">Hover a pixel to see the math behind it</span>
+          <br>
+          <span style="color:var(--text-dim)">Parity: P = D₀ ⊕ D₁ ⊕ D₂ ⊕ ...</span>
+        </div>
+        <div class="binary-block" id="binaryBlock">
+          <span class="label-sm">Binary / Hex View</span>
+          <br>
+          <span style="color:var(--text-dim)">Select a pixel</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Status Bar ──────────────────────────────────────── -->
+<div class="status-bar" id="statusBar">
+  <span><span class="status-dot ok"></span> Array Healthy</span>
+  <span>|</span>
+  <span id="statusInfo">No image loaded</span>
+  <span style="flex:1"></span>
+  <span>GF(2⁸) poly: x⁸+x⁴+x³+x²+1 (0x11D)</span>
+</div>
+
+<!-- ─── Tooltip ─────────────────────────────────────────── -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ─── GF Explorer Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="gfModal">
+  <div class="modal" style="position:relative">
+    <button class="close-modal" onclick="closeGF()">✕</button>
+    <h2>🔬 Galois Field GF(2⁸) Explorer</h2>
+    <div class="gf-calc">
+      <input type="text" id="gfA" value="0xA3" placeholder="0x..">
+      <select id="gfOp">
+        <option value="add">⊕ Add (XOR)</option>
+        <option value="mul">⊗ Multiply</option>
+        <option value="div">÷ Divide</option>
+      </select>
+      <input type="text" id="gfB" value="0x7F" placeholder="0x..">
+      <button class="btn-sm" onclick="calcGF()">=</button>
+      <span class="gf-result" id="gfResult">0x__</span>
+    </div>
+    <p style="font-size:.75rem;color:var(--text-dim);margin-bottom:12px">
+      Primitive polynomial: x⁸ + x⁴ + x³ + x² + 1 &nbsp;(0x11D)
+    </p>
+    <h3 style="font-size:.85rem;margin-bottom:8px;color:var(--text)">Multiplication Table (first 16×16)</h3>
+    <div class="gf-table-wrap" id="gfTableWrap"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+// ── GF(2^8) Math Engine ──────────────────────────────────
+const PRIM = 0x11D;
+const gfExp = new Uint8Array(512);
+const gfLog = new Uint8Array(256);
+(function buildTables() {
+  let x = 1;
+  for (let i = 0; i < 255; i++) {
+    gfExp[i] = x; gfLog[x] = i;
+    x = x << 1;
+    if (x & 0x100) x ^= (PRIM & 0xFF) | 0x100;
+    x &= 0xFF;
+  }
+  for (let i = 255; i < 512; i++) gfExp[i] = gfExp[i - 255];
+})();
+function gfMul(a, b) {
+  if (a === 0 || b === 0) return 0;
+  return gfExp[gfLog[a] + gfLog[b]];
+}
+function gfAdd(a, b) { return a ^ b; }
+function gfDiv(a, b) {
+  if (b === 0) return 0;
+  if (a === 0) return 0;
+  return gfExp[(gfLog[a] - gfLog[b] + 255) % 255];
+}
+
+// ── 8-bit Palette ────────────────────────────────────────
+function valToRgb(v) {
+  const r = ((v >> 5) & 7) * 36;
+  const g = ((v >> 2) & 7) * 36;
+  const b = (v & 3) * 85;
+  return [r, g, b];
+}
+function rgbStr(v) { const [r,g,b] = valToRgb(v); return `rgb(${r},${g},${b})`; }
+function hexStr(v) { return '0x' + v.toString(16).toUpperCase().padStart(2,'0'); }
+function binStr(v) { return v.toString(2).padStart(8,'0'); }
+
+// ── Generate sample pixel art images ─────────────────────
+function generateSampleImages() {
+  const imgs = [];
+  // 1) Gradient 8x8
+  const g = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) g[i] = (i * 4) & 0xFF;
+  imgs.push({ name: 'Gradient 8×8', w: 8, h: 8, pixels: g });
+  // 2) Smiley 8x8
+  const s = new Uint8Array(64).fill(0xFC); // yellow-ish
+  // eyes
+  [10,13].forEach(i => s[i] = 0x00);
+  // mouth
+  [41,42,43,44,45,46, 34,37, 50,53].forEach(i => { if(i<64) s[i] = 0x00; });
+  [49,54].forEach(i => { if(i<64) s[i] = 0x00; });
+  imgs.push({ name: 'Smiley 8×8', w: 8, h: 8, pixels: s });
+  // 3) Checker 8x8
+  const c = new Uint8Array(64);
+  for (let y = 0; y < 8; y++)
+    for (let x = 0; x < 8; x++)
+      c[y*8+x] = ((x+y) % 2 === 0) ? 0xE0 : 0x1C;
+  imgs.push({ name: 'Checker 8×8', w: 8, h: 8, pixels: c });
+  // 4) Heart 8x8
+  const hr = new Uint8Array(64).fill(0x03); // blue bg
+  [9,10,12,13, 16,17,18,19,20,21, 24,25,26,27,28,29, 33,34,35,36,37, 42,43,44, 51,52, 59]
+    .forEach(i => { if(i<64) hr[i] = 0xE0; }); // red
+  imgs.push({ name: 'Heart 8×8', w: 8, h: 8, pixels: hr });
+  return imgs;
+}
+
+// ── State ────────────────────────────────────────────────
+let state = {
+  algo: 'raid5', dataDisks: 3, parityDisks: 1,
+  disks: [], // [{ id, status, pixels:[], stripes:[], role:'data'|'parity'|'mixed' }]
+  image: null, populated: false, inspectorPinned: false,
+  hoveredPixel: null
+};
+const sampleImages = generateSampleImages();
+
+// ── Render Image Cards ───────────────────────────────────
+function renderImageCards() {
+  const cont = document.getElementById('imageCards');
+  cont.innerHTML = '';
+  sampleImages.forEach((img, idx) => {
+    const card = document.createElement('div');
+    card.className = 'image-card';
+    card.draggable = true;
+    card.dataset.idx = idx;
+    const cvs = document.createElement('canvas');
+    cvs.width = img.w; cvs.height = img.h;
+    cvs.style.width = (img.w * 14) + 'px';
+    cvs.style.height = (img.h * 14) + 'px';
+    const ctx = cvs.getContext('2d');
+    const id = ctx.createImageData(img.w, img.h);
+    for (let i = 0; i < img.pixels.length; i++) {
+      const [r,g,b] = valToRgb(img.pixels[i]);
+      id.data[i*4]=r; id.data[i*4+1]=g; id.data[i*4+2]=b; id.data[i*4+3]=255;
+    }
+    ctx.putImageData(id, 0, 0);
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = img.name;
+    card.appendChild(cvs);
+    card.appendChild(lbl);
+    // Drag events
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', idx);
+      card.classList.add('dragging');
+      document.getElementById('dropZone').classList.add('active');
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.getElementById('dropZone').classList.remove('active');
+    });
+    cont.appendChild(card);
+  });
+}
+
+// ── Drop zone ────────────────────────────────────────────
+function setupDropZone() {
+  const area = document.getElementById('diskArea');
+  area.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('active');
+    const idx = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!isNaN(idx) && sampleImages[idx]) {
+      distributeImage(sampleImages[idx]);
+    }
+  });
+}
+
+// ── Config change ────────────────────────────────────────
+function onConfigChange() {
+  const algo = document.getElementById('cfgAlgo').value;
+  const pInput = document.getElementById('cfgParity');
+  if (algo === 'raid5') { pInput.value = 1; pInput.disabled = true; }
+  else if (algo === 'raid6') { pInput.value = 2; pInput.disabled = true; }
+  else { pInput.disabled = false; }
+  state.algo = algo;
+  state.dataDisks = parseInt(document.getElementById('cfgData').value);
+  state.parityDisks = parseInt(pInput.value);
+  if (state.populated && state.image) {
+    distributeImage(state.image);
+  }
+}
+
+// ── Distribute Image to Disks ────────────────────────────
+function distributeImage(img) {
+  state.image = img;
+  state.populated = true;
+  const totalDisks = state.dataDisks + state.parityDisks;
+  const blockSize = 8; // pixels per block
+  const pixels = img.pixels;
+  const totalPixels = pixels.length;
+
+  // Compute stripes
+  const pixelsPerStripe = state.dataDisks * blockSize;
+  const numStripes = Math.ceil(totalPixels / pixelsPerStripe);
+
+  // Init disks
+  state.disks = [];
+  for (let d = 0; d < totalDisks; d++) {
+    state.disks.push({
+      id: d, status: 'healthy', stripes: [], role: 'mixed',
+      allPixels: [] // {value, isParity, stripeIdx, posInBlock, sourcePixels:[]}
+    });
+  }
+
+  // Fill stripes
+  for (let s = 0; s < numStripes; s++) {
+    const stripeStart = s * pixelsPerStripe;
+    const dataBlocks = []; // one per data disk, each is blockSize values
+
+    for (let d = 0; d < state.dataDisks; d++) {
+      const block = [];
+      for (let p = 0; p < blockSize; p++) {
+        const srcIdx = stripeStart + d * blockSize + p;
+        block.push(srcIdx < totalPixels ? pixels[srcIdx] : 0);
+      }
+      dataBlocks.push(block);
+    }
+
+    // Compute parity
+    const parityBlocks = [];
+    // P parity (XOR)
+    const pBlock = new Array(blockSize).fill(0);
+    for (let p = 0; p < blockSize; p++) {
+      for (let d = 0; d < state.dataDisks; d++) pBlock[p] ^= dataBlocks[d][p];
+    }
+    parityBlocks.push(pBlock);
+
+    // Q parity for RAID 6 / RS
+    if (state.parityDisks >= 2) {
+      const qBlock = new Array(blockSize).fill(0);
+      for (let p = 0; p < blockSize; p++) {
+        for (let d = 0; d < state.dataDisks; d++) {
+          qBlock[p] = gfAdd(qBlock[p], gfMul(gfExp[d], dataBlocks[d][p]));
+        }
+      }
+      parityBlocks.push(qBlock);
+    }
+
+    // Assign to disks with RAID 5 rotation
+    let parityStartDisk;
+    if (state.algo === 'raid5') {
+      parityStartDisk = (totalDisks - 1) - (s % totalDisks);
+    } else if (state.algo === 'raid6') {
+      parityStartDisk = (totalDisks - 2) - (s % totalDisks);
+      if (parityStartDisk < 0) parityStartDisk += totalDisks;
+    } else {
+      parityStartDisk = state.dataDisks; // RS: parity at end
+    }
+
+    let dataIdx = 0;
+    for (let d = 0; d < totalDisks; d++) {
+      const isParityDisk = [];
+      for (let pi = 0; pi < state.parityDisks; pi++) {
+        isParityDisk.push((parityStartDisk + pi) % totalDisks);
+      }
+      const parityNum = isParityDisk.indexOf(d);
+      if (parityNum !== -1) {
+        // This disk holds parity for this stripe
+        const pb = parityBlocks[parityNum] || pBlock;
+        for (let p = 0; p < blockSize; p++) {
+          const sources = [];
+          for (let dd = 0; dd < state.dataDisks; dd++) {
+            const srcDiskIdx = findDataDiskForStripe(dd, isParityDisk, totalDisks);
+            sources.push({ disk: srcDiskIdx, value: dataBlocks[dd][p], gfCoeff: parityNum === 0 ? 1 : gfExp[dd] });
+          }
+          state.disks[d].allPixels.push({
+            value: pb[p], isParity: true,
+            parityType: parityNum === 0 ? 'P' : 'Q',
+            stripeIdx: s, posInBlock: p, sourcePixels: sources
+          });
+        }
+      } else {
+        // Data disk
+        if (dataIdx < state.dataDisks) {
+          for (let p = 0; p < blockSize; p++) {
+            state.disks[d].allPixels.push({
+              value: dataBlocks[dataIdx][p], isParity: false,
+              stripeIdx: s, posInBlock: p, sourcePixels: []
+            });
+          }
+          dataIdx++;
+        }
+      }
+    }
+  }
+
+  document.getElementById('statusInfo').textContent =
+    `${img.name} • ${numStripes} stripes • ${totalDisks} disks (${state.dataDisks}D + ${state.parityDisks}P)`;
+
+  renderDisks(true);
+  renderVolumePreview();
+}
+
+function findDataDiskForStripe(dataBlockIdx, parityDiskIndices, totalDisks) {
+  let count = 0;
+  for (let d = 0; d < totalDisks; d++) {
+    if (parityDiskIndices.includes(d)) continue;
+    if (count === dataBlockIdx) return d;
+    count++;
+  }
+  return 0;
+}
+
+// ── Render Disks ─────────────────────────────────────────
+function renderDisks(animate = false) {
+  const cont = document.getElementById('diskContainer');
+  cont.innerHTML = '';
+
+  state.disks.forEach((disk, di) => {
+    const col = document.createElement('div');
+    col.className = 'disk-col' + (disk.status !== 'healthy' ? ' ' + disk.status : '');
+    col.dataset.disk = di;
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'disk-header';
+    const statusCls = disk.status === 'healthy' ? 'healthy' : disk.status;
+    const hasData = disk.allPixels.some(p => !p.isParity);
+    const hasParity = disk.allPixels.some(p => p.isParity);
+    const roleLabel = (hasData && hasParity) ? 'mixed' : hasParity ? 'parity' : 'data';
+    const roleText = roleLabel === 'mixed' ? 'DATA + PARITY' : roleLabel === 'parity' ? 'PARITY' : 'DATA';
+    hdr.innerHTML = `
+      <div class="disk-name"><span class="disk-status ${statusCls}"></span>Disk ${di}</div>
+      <div class="disk-role ${roleLabel}">${roleText}</div>
+    `;
+    col.appendChild(hdr);
+
+    // Rebuild sweep
+    if (disk.status === 'rebuilding') {
+      const sweep = document.createElement('div');
+      sweep.className = 'rebuild-sweep';
+      col.appendChild(sweep);
+    }
+
+    // Pixels
+    const pxDiv = document.createElement('div');
+    pxDiv.className = 'disk-pixels';
+
+    // Group by stripe
+    const stripes = {};
+    disk.allPixels.forEach((px, pi) => {
+      if (!stripes[px.stripeIdx]) stripes[px.stripeIdx] = [];
+      stripes[px.stripeIdx].push({ ...px, globalIdx: pi });
+    });
+
+    Object.keys(stripes).forEach(sIdx => {
+      const grp = document.createElement('div');
+      grp.className = 'stripe-group' + (stripes[sIdx][0].isParity ? ' parity-stripe' : '');
+      const lbl = document.createElement('div');
+      lbl.className = 'stripe-label';
+      lbl.textContent = stripes[sIdx][0].isParity
+        ? `Stripe ${sIdx} (${stripes[sIdx][0].parityType || 'P'})`
+        : `Stripe ${sIdx}`;
+      grp.appendChild(lbl);
+
+      // Render as 4-wide rows
+      const pixelsInStripe = stripes[sIdx];
+      for (let r = 0; r < pixelsInStripe.length; r += 4) {
+        const row = document.createElement('div');
+        row.className = 'pixel-row';
+        for (let c = 0; c < 4 && r + c < pixelsInStripe.length; c++) {
+          const px = pixelsInStripe[r + c];
+          const el = document.createElement('div');
+          el.className = 'pixel' + (px.isParity ? ' parity' : '');
+          el.style.backgroundColor = rgbStr(px.value);
+          el.dataset.disk = di;
+          el.dataset.idx = px.globalIdx;
+          el.dataset.stripe = px.stripeIdx;
+          el.dataset.parity = px.isParity ? '1' : '0';
+          el.dataset.value = px.value;
+
+          if (disk.status === 'corrupted' && px.corrupted) {
+            el.classList.add('corrupted-px');
+          }
+
+          // Hover events
+          el.addEventListener('mouseenter', (ev) => onPixelHover(di, px, el, ev));
+          el.addEventListener('mouseleave', onPixelLeave);
+          el.addEventListener('click', () => onPixelClick(di, px, el));
+
+          // Animate entrance
+          if (animate) {
+            el.style.opacity = '0';
+            el.style.transform = 'scale(0) translateY(-20px)';
+            const delay = (parseInt(sIdx) * 120) + (r + c) * 30 + di * 60;
+            setTimeout(() => {
+              el.style.transition = 'all .4s cubic-bezier(.34,1.56,.64,1)';
+              el.style.opacity = '1';
+              el.style.transform = 'scale(1) translateY(0)';
+            }, delay);
+          }
+
+          row.appendChild(el);
+        }
+        grp.appendChild(row);
+      }
+      pxDiv.appendChild(grp);
+    });
+    col.appendChild(pxDiv);
+
+    // Action buttons
+    const acts = document.createElement('div');
+    acts.className = 'disk-actions';
+    acts.innerHTML = `
+      <button class="disk-btn danger" onclick="removeDisk(${di})" title="Remove Disk">💀</button>
+      <button class="disk-btn warn" onclick="wipeDisk(${di})" title="Wipe Disk">🧹</button>
+      <button class="disk-btn" onclick="cosmicRay(${di})" title="Cosmic Ray" style="font-size:.75rem">☢️</button>
+      <button class="disk-btn success" onclick="readdDisk(${di})" title="Re-add Disk">➕</button>
+      <button class="disk-btn info" onclick="rebuildDisk(${di})" title="Rebuild Disk">🔄</button>
+    `;
+    col.appendChild(acts);
+
+    cont.appendChild(col);
+  });
+}
+
+// ── Volume Preview ───────────────────────────────────────
+function renderVolumePreview() {
+  const panel = document.getElementById('volumePreview');
+  if (!state.image || !state.populated) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+
+  const img = state.image;
+  const scale = 20; // render pixels at 20x zoom
+
+  // ── Original image canvas ──
+  const origCvs = document.getElementById('previewOriginal');
+  origCvs.width = img.w; origCvs.height = img.h;
+  origCvs.style.width = img.w * scale + 'px';
+  origCvs.style.height = img.h * scale + 'px';
+  const origCtx = origCvs.getContext('2d');
+  const origId = origCtx.createImageData(img.w, img.h);
+  for (let i = 0; i < img.pixels.length; i++) {
+    const [r,g,b] = valToRgb(img.pixels[i]);
+    origId.data[i*4]=r; origId.data[i*4+1]=g; origId.data[i*4+2]=b; origId.data[i*4+3]=255;
+  }
+  origCtx.putImageData(origId, 0, 0);
+
+  // ── Read data pixels back from disks in stripe order ──
+  const totalDisks = state.dataDisks + state.parityDisks;
+  const blockSize = 8;
+  const allStripeIndices = [...new Set(state.disks.flatMap(d => d.allPixels.map(p => p.stripeIdx)))].sort((a,b) => a - b);
+  const reconstructed = new Uint8Array(img.pixels.length);
+  const onDisk = new Uint8Array(img.pixels.length);
+  let writeIdx = 0;
+
+  allStripeIndices.forEach(sIdx => {
+    // Collect data blocks for this stripe across disks in order
+    const diskOrder = [];
+    for (let d = 0; d < totalDisks; d++) {
+      const disk = state.disks[d];
+      const stripePixels = disk.allPixels.filter(p => p.stripeIdx === sIdx && !p.isParity);
+      if (stripePixels.length > 0) diskOrder.push({ disk: d, pixels: stripePixels });
+    }
+    diskOrder.forEach(({disk: dIdx, pixels: pxs}) => {
+      pxs.forEach(px => {
+        if (writeIdx < img.pixels.length) {
+          const disk = state.disks[dIdx];
+          if (disk.status === 'failed') {
+            // Try to reconstruct from parity
+            onDisk[writeIdx] = 0; // lost
+            reconstructed[writeIdx] = tryReconstruct(sIdx, px.posInBlock, dIdx);
+          } else {
+            onDisk[writeIdx] = px.value;
+            reconstructed[writeIdx] = px.value;
+          }
+          writeIdx++;
+        }
+      });
+    });
+  });
+
+  // ── On-Disk canvas ──
+  const diskCvs = document.getElementById('previewDisk');
+  diskCvs.width = img.w; diskCvs.height = img.h;
+  diskCvs.style.width = img.w * scale + 'px';
+  diskCvs.style.height = img.h * scale + 'px';
+  const diskCtx = diskCvs.getContext('2d');
+  const diskImgData = diskCtx.createImageData(img.w, img.h);
+  for (let i = 0; i < img.pixels.length; i++) {
+    const [r,g,b] = valToRgb(onDisk[i]);
+    diskImgData.data[i*4]=r; diskImgData.data[i*4+1]=g; diskImgData.data[i*4+2]=b; diskImgData.data[i*4+3]=255;
+  }
+  diskCtx.putImageData(diskImgData, 0, 0);
+
+  // ── Reconstructed canvas ──
+  const reconCvs = document.getElementById('previewRecon');
+  reconCvs.width = img.w; reconCvs.height = img.h;
+  reconCvs.style.width = img.w * scale + 'px';
+  reconCvs.style.height = img.h * scale + 'px';
+  const reconCtx = reconCvs.getContext('2d');
+  const reconImgData = reconCtx.createImageData(img.w, img.h);
+  for (let i = 0; i < img.pixels.length; i++) {
+    const [r,g,b] = valToRgb(reconstructed[i]);
+    reconImgData.data[i*4]=r; reconImgData.data[i*4+1]=g; reconImgData.data[i*4+2]=b; reconImgData.data[i*4+3]=255;
+  }
+  reconCtx.putImageData(reconImgData, 0, 0);
+
+  // ── Diff stats ──
+  let matchCount = 0, corruptCount = 0, lostCount = 0;
+  for (let i = 0; i < img.pixels.length; i++) {
+    if (reconstructed[i] === img.pixels[i]) matchCount++;
+    else if (state.disks.some(d => d.status === 'failed')) lostCount++;
+    else corruptCount++;
+  }
+  const total = img.pixels.length;
+  const diffEl = document.getElementById('previewDiff');
+
+  // Border styling
+  diskCvs.className = reconCvs.className = '';
+  if (matchCount === total) {
+    reconCvs.classList.add('perfect');
+    diskCvs.classList.add('perfect');
+    diffEl.innerHTML = `<span class="diff-ok">✓ ${matchCount}/${total} pixels match</span><span class="diff-ok">Image intact</span>`;
+  } else if (lostCount > 0 && matchCount + lostCount >= total - corruptCount) {
+    reconCvs.classList.add(matchCount === total ? 'perfect' : 'damaged');
+    diskCvs.classList.add('damaged');
+    diffEl.innerHTML = `<span class="diff-warn">⚠ ${lostCount} pixel(s) on failed disk(s)</span>` +
+      `<span class="${matchCount === total ? 'diff-ok' : 'diff-err'}">${matchCount === total ? '✓ Fully recovered via parity' : '✕ ' + (total - matchCount) + ' unrecoverable'}</span>`;
+  } else {
+    reconCvs.classList.add('damaged');
+    diskCvs.classList.add('damaged');
+    diffEl.innerHTML = `<span class="diff-err">✕ ${corruptCount + lostCount} pixel(s) differ</span>` +
+      `<span class="diff-warn">${corruptCount} corrupted, ${lostCount} lost</span>`;
+  }
+}
+
+function tryReconstruct(stripeIdx, posInBlock, failedDisk) {
+  // Try XOR-based reconstruction from parity P
+  const totalDisks = state.dataDisks + state.parityDisks;
+  // Find the P-parity pixel for this stripe+position
+  let parityValue = null;
+  let otherDataValues = [];
+  for (let d = 0; d < totalDisks; d++) {
+    if (d === failedDisk) continue;
+    const disk = state.disks[d];
+    if (disk.status === 'failed') continue; // can't use this disk either
+    const match = disk.allPixels.find(p => p.stripeIdx === stripeIdx && p.posInBlock === posInBlock);
+    if (!match) continue;
+    if (match.isParity && match.parityType === 'P') {
+      parityValue = match.value;
+    } else if (!match.isParity) {
+      otherDataValues.push(match.value);
+    }
+  }
+  if (parityValue !== null) {
+    let recovered = parityValue;
+    otherDataValues.forEach(v => { recovered ^= v; });
+    return recovered;
+  }
+  return 0; // unrecoverable
+}
+
+// ── Pixel Hover ──────────────────────────────────────────
+function onPixelHover(diskIdx, px, el, ev) {
+  if (state.inspectorPinned) return;
+
+  // Tooltip
+  const tip = document.getElementById('tooltip');
+  tip.textContent = `Disk ${diskIdx} | ${px.isParity ? px.parityType + ' Parity' : 'Data'} | Stripe ${px.stripeIdx}\n` +
+    `Value: ${hexStr(px.value)} | ${binStr(px.value)}`;
+  tip.style.left = (ev.clientX + 12) + 'px';
+  tip.style.top = (ev.clientY - 40) + 'px';
+  tip.classList.add('visible');
+
+  // Highlight
+  el.classList.add('highlighted');
+
+  // Show math in inspector
+  showInspector(diskIdx, px);
+
+  // Draw connection lines for parity
+  if (px.isParity && px.sourcePixels) {
+    highlightSources(px.sourcePixels, el);
+  }
+}
+
+function onPixelLeave() {
+  if (state.inspectorPinned) return;
+  document.getElementById('tooltip').classList.remove('visible');
+  clearHighlights();
+}
+
+function onPixelClick(diskIdx, px, el) {
+  state.inspectorPinned = !state.inspectorPinned;
+  document.getElementById('pinBtn').classList.toggle('pinned', state.inspectorPinned);
+  if (state.inspectorPinned) {
+    showInspector(diskIdx, px);
+    if (px.isParity && px.sourcePixels) highlightSources(px.sourcePixels, el);
+    el.classList.add('highlighted');
+  } else {
+    clearHighlights();
+  }
+}
+
+function highlightSources(sources, parityEl) {
+  // Highlight source pixels on other disks
+  sources.forEach(src => {
+    const srcPixels = document.querySelectorAll(`.pixel[data-disk="${src.disk}"]`);
+    srcPixels.forEach(sp => {
+      if (parseInt(sp.dataset.value) === src.value && !sp.classList.contains('parity')) {
+        sp.classList.add('highlighted');
+      }
+    });
+  });
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.pixel.highlighted').forEach(p => p.classList.remove('highlighted'));
+  document.getElementById('connSvg').innerHTML = '';
+}
+
+// ── Inspector ────────────────────────────────────────────
+function showInspector(diskIdx, px) {
+  const fb = document.getElementById('formulaBlock');
+  const bb = document.getElementById('binaryBlock');
+  document.getElementById('inspectorHint').textContent =
+    `Disk ${diskIdx}, Stripe ${px.stripeIdx}, Pos ${px.posInBlock}`;
+
+  if (px.isParity && px.sourcePixels && px.sourcePixels.length > 0) {
+    const type = px.parityType || 'P';
+    let formula = `<span class="label-sm">${type} Parity Calculation — Stripe ${px.stripeIdx}, Position ${px.posInBlock}</span>\n`;
+
+    if (type === 'P') {
+      formula += `<br>${type} = `;
+      formula += px.sourcePixels.map((s,i) =>
+        `D<sub>${s.disk}</sub>[${px.posInBlock}]`
+      ).join(` <span class="op">⊕</span> `);
+      formula += `<br>&nbsp; = `;
+      formula += px.sourcePixels.map(s =>
+        `<span class="val">${hexStr(s.value)}</span>`
+      ).join(` <span class="op">⊕</span> `);
+      formula += `<br>&nbsp; = <span class="result">${hexStr(px.value)}</span>`;
+      formula += ` <span class="color-swatch" style="background:${rgbStr(px.value)}"></span>`;
+    } else {
+      formula += `<br>${type} = `;
+      formula += px.sourcePixels.map((s,i) =>
+        `g<sup>${i}</sup>·D<sub>${s.disk}</sub>[${px.posInBlock}]`
+      ).join(` <span class="op">⊕</span> `);
+      formula += `<br>&nbsp; = `;
+      formula += px.sourcePixels.map((s,i) =>
+        `<span class="val">${hexStr(gfExp[i])}</span> <span class="op">⊗</span> <span class="val">${hexStr(s.value)}</span> (=${hexStr(gfMul(gfExp[i], s.value))})`
+      ).join(`<br>&nbsp;&nbsp;&nbsp;<span class="op">⊕</span> `);
+      formula += `<br>&nbsp; = <span class="result">${hexStr(px.value)}</span>`;
+      formula += ` <span class="color-swatch" style="background:${rgbStr(px.value)}"></span>`;
+    }
+    fb.innerHTML = formula;
+
+    // Binary view
+    let bin = `<span class="label-sm">Binary Breakdown</span>\n`;
+    if (type === 'P') {
+      px.sourcePixels.forEach((s, i) => {
+        const bits = binStr(s.value).split('').map(b => `<span class="bit">${b}</span>`).join('');
+        bin += `<br>D<sub>${s.disk}</sub>: ${bits} (${hexStr(s.value)})`;
+      });
+      const xorBits = binStr(px.value).split('');
+      // Highlight differing bits
+      const resBits = xorBits.map((b, bi) => {
+        const allSame = px.sourcePixels.every(s => binStr(s.value)[bi] === b);
+        return `<span class="bit${!allSame ? '' : ''}">${b}</span>`;
+      }).join('');
+      bin += `<br>────────────────────`;
+      bin += `<br><b>${type}:</b>&nbsp; ${resBits} (<span class="result">${hexStr(px.value)}</span>)`;
+    } else {
+      bin += `<br>GF(2⁸) weighted sum`;
+      px.sourcePixels.forEach((s, i) => {
+        bin += `<br>g<sup>${i}</sup>⊗${hexStr(s.value)} = ${hexStr(gfMul(gfExp[i], s.value))}`;
+      });
+      bin += `<br>────────────────────`;
+      bin += `<br><b>${type}:</b> <span class="result">${hexStr(px.value)}</span>`;
+    }
+    bin += ` <span class="color-swatch" style="background:${rgbStr(px.value)}"></span>`;
+    bb.innerHTML = bin;
+  } else {
+    fb.innerHTML = `<span class="label-sm">Data Pixel — Stripe ${px.stripeIdx}, Position ${px.posInBlock}</span>` +
+      `<br><br>Value: <span class="val">${hexStr(px.value)}</span> = <span class="val">${binStr(px.value)}</span>₂` +
+      `<br>This pixel contributes to parity calculations in stripe ${px.stripeIdx}` +
+      ` <span class="color-swatch" style="background:${rgbStr(px.value)}"></span>`;
+    bb.innerHTML = `<span class="label-sm">8-Bit Color Decode</span>` +
+      `<br><br>R: bits [7:5] = ${(px.value >> 5) & 7} → ${((px.value >> 5) & 7) * 36}` +
+      `<br>G: bits [4:2] = ${(px.value >> 2) & 7} → ${((px.value >> 2) & 7) * 36}` +
+      `<br>B: bits [1:0] = ${px.value & 3} → ${(px.value & 3) * 85}` +
+      ` <span class="color-swatch" style="background:${rgbStr(px.value)}"></span>`;
+  }
+}
+
+// ── Disk Actions ─────────────────────────────────────────
+function removeDisk(idx) {
+  if (!state.populated) return;
+  state.disks[idx].status = 'failed';
+  renderDisks(false);
+  renderVolumePreview();
+  updateStatus();
+  // Animate the fail
+  const col = document.querySelector(`.disk-col[data-disk="${idx}"]`);
+  if (col) {
+    col.style.transition = 'all .4s';
+    col.style.transform = 'scale(0.97)';
+    setTimeout(() => { col.style.transform = ''; }, 400);
+  }
+}
+
+function wipeDisk(idx) {
+  if (!state.populated) return;
+  state.disks[idx].allPixels.forEach(px => { px.value = 0; });
+  state.disks[idx].status = 'healthy';
+  renderDisks(false);
+  renderVolumePreview();
+}
+
+function cosmicRay(idx) {
+  if (!state.populated || state.disks[idx].status === 'failed') return;
+  const disk = state.disks[idx];
+  if (disk.allPixels.length === 0) return;
+  // Pick random pixel
+  const pi = Math.floor(Math.random() * disk.allPixels.length);
+  const px = disk.allPixels[pi];
+  const bit = 1 << Math.floor(Math.random() * 8);
+  px.value ^= bit;
+  px.corrupted = true;
+  disk.status = 'corrupted';
+  renderDisks(false);
+  renderVolumePreview();
+  updateStatus();
+
+  // Zap animation
+  const pixelEls = document.querySelectorAll(`.pixel[data-disk="${idx}"]`);
+  if (pixelEls[pi]) {
+    pixelEls[pi].classList.add('zapping');
+    setTimeout(() => pixelEls[pi].classList.remove('zapping'), 500);
+  }
+}
+
+function readdDisk(idx) {
+  if (!state.populated) return;
+  if (state.disks[idx].status !== 'failed') return;
+  state.disks[idx].status = 'healthy';
+  state.disks[idx].allPixels.forEach(px => { px.value = 0; });
+  renderDisks(false);
+  renderVolumePreview();
+  updateStatus();
+}
+
+function rebuildDisk(idx) {
+  if (!state.populated) return;
+  const disk = state.disks[idx];
+  disk.status = 'rebuilding';
+  renderDisks(false);
+
+  // Simulate animated rebuild
+  let stripe = 0;
+  const totalStripes = new Set(disk.allPixels.map(p => p.stripeIdx)).size;
+  const interval = setInterval(() => {
+    // Rebuild pixels for this stripe using parity
+    disk.allPixels.forEach(px => {
+      if (px.stripeIdx === stripe) {
+        if (px.isParity && px.sourcePixels) {
+          // Recompute parity
+          if (px.parityType === 'P') {
+            let v = 0;
+            px.sourcePixels.forEach(s => { v ^= s.value; });
+            px.value = v;
+          } else {
+            let v = 0;
+            px.sourcePixels.forEach((s, i) => { v = gfAdd(v, gfMul(gfExp[i], s.value)); });
+            px.value = v;
+          }
+        }
+        // For data pixels we'd need the inverse operation - simplified here
+      }
+    });
+    stripe++;
+    if (stripe >= totalStripes) {
+      clearInterval(interval);
+      disk.status = 'healthy';
+      renderDisks(true);
+      renderVolumePreview();
+      updateStatus();
+    } else {
+      renderDisks(false);
+      renderVolumePreview();
+    }
+  }, 500);
+}
+
+function updateStatus() {
+  const failedCount = state.disks.filter(d => d.status === 'failed').length;
+  const corruptedCount = state.disks.filter(d => d.status === 'corrupted').length;
+  const bar = document.getElementById('statusBar');
+  const dot = bar.querySelector('.status-dot');
+  const info = document.getElementById('statusInfo');
+
+  if (failedCount > state.parityDisks) {
+    dot.className = 'status-dot err';
+    info.textContent = `⚠ ARRAY FAILED — ${failedCount} disks lost, data UNRECOVERABLE`;
+    bar.style.background = 'rgba(255,71,87,.15)';
+  } else if (failedCount > 0) {
+    dot.className = 'status-dot warn';
+    info.textContent = `⚠ Degraded — ${failedCount} disk(s) failed. Can tolerate ${state.parityDisks - failedCount} more.`;
+    bar.style.background = 'rgba(255,165,2,.1)';
+  } else if (corruptedCount > 0) {
+    dot.className = 'status-dot warn';
+    info.textContent = `⚠ ${corruptedCount} disk(s) have corruption. Run Verify & Repair.`;
+    bar.style.background = 'rgba(139,92,246,.1)';
+  } else {
+    dot.className = 'status-dot ok';
+    const img = state.image;
+    info.textContent = img ? `${img.name} • ${state.disks.length} disks (${state.dataDisks}D + ${state.parityDisks}P)` : 'No image loaded';
+    bar.style.background = '';
+  }
+}
+
+// ── Toggle Animate ───────────────────────────────────────
+function toggleAnimate() {
+  const btn = document.getElementById('btnAnimate');
+  btn.classList.toggle('active');
+}
+
+function togglePin() {
+  state.inspectorPinned = !state.inspectorPinned;
+  document.getElementById('pinBtn').classList.toggle('pinned', state.inspectorPinned);
+  if (!state.inspectorPinned) clearHighlights();
+}
+
+// ── GF Explorer ──────────────────────────────────────────
+function openGF() {
+  document.getElementById('gfModal').classList.add('open');
+  buildGFTable();
+}
+function closeGF() { document.getElementById('gfModal').classList.remove('open'); }
+
+function calcGF() {
+  const a = parseInt(document.getElementById('gfA').value) & 0xFF;
+  const b = parseInt(document.getElementById('gfB').value) & 0xFF;
+  const op = document.getElementById('gfOp').value;
+  let result;
+  if (op === 'add') result = gfAdd(a, b);
+  else if (op === 'mul') result = gfMul(a, b);
+  else result = gfDiv(a, b);
+  document.getElementById('gfResult').textContent = hexStr(result);
+  document.getElementById('gfResult').style.background = rgbStr(result);
+  document.getElementById('gfResult').style.color = '#fff';
+  document.getElementById('gfResult').style.textShadow = '0 1px 3px rgba(0,0,0,.5)';
+}
+
+function buildGFTable() {
+  const wrap = document.getElementById('gfTableWrap');
+  const N = 16; // 16x16 sub-table
+  let html = '<table class="gf-table"><tr><th>⊗</th>';
+  for (let c = 0; c < N; c++) html += `<th>${hexStr(c)}</th>`;
+  html += '</tr>';
+  for (let r = 0; r < N; r++) {
+    html += `<tr><th>${hexStr(r)}</th>`;
+    for (let c = 0; c < N; c++) {
+      const v = gfMul(r, c);
+      html += `<td style="background:${rgbStr(v)};color:rgba(255,255,255,.7)">${hexStr(v).slice(2)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+// ── Init ─────────────────────────────────────────────────
+renderImageCards();
+setupDropZone();
+onConfigChange();
+
+// Auto-load smiley on startup for demo
+setTimeout(() => distributeImage(sampleImages[1]), 600);
+</script>
+</body>
+</html>

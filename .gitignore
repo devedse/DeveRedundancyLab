@@ -1,0 +1,9 @@
+# Playwright MCP artifacts (screenshots, logs)
+.playwright-mcp/
+
+# Vite cache
+.vite/
+
+# OS files
+.DS_Store
+Thumbs.db
