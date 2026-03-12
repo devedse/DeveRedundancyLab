@@ -112,7 +112,7 @@ function handleAction(action: string, diskId: number) {
 
 <template>
   <div
-    class="disk-column flex flex-col rounded-lg border bg-surface-2 min-w-[100px]"
+    class="disk-column flex flex-col flex-1 rounded-lg border bg-surface-2 min-w-[100px] max-w-[180px]"
     :class="{
       'border-disk-healthy': disk.status === 'healthy',
       'border-disk-failed': disk.status === 'failed',

@@ -75,8 +75,36 @@ function createChecker(): ImageAsset {
   }
 }
 
+/** Create a Mickey Mouse face (8×8). */
+function createMickey(): ImageAsset {
+  const _ = 0b01010111 // sky-blue background (R=72,G=180,B=255)
+  const B = 0b00000000 // black (ears, outline, nose)
+  const S = 0b11010101 // warm peach skin (R=216,G=180,B=85)
+  const W = 0b11111111 // white (eyes)
+  //prettier-ignore
+  const raw = [
+    _, B, B, _, _, B, B, _,  // ears top
+    B, B, B, _, _, B, B, B,  // ears bottom
+    _, _, B, B, B, B, _, _,  // head top outline
+    _, B, S, S, S, S, B, _,  // forehead
+    _, B, W, S, S, W, B, _,  // eyes
+    _, B, S, B, B, S, B, _,  // nose
+    _, _, B, S, S, B, _, _,  // lower face
+    _, _, _, B, B, _, _, _,  // chin
+  ]
+  const pixels = new Uint8Array(raw)
+  return {
+    id: 'mickey-8x8',
+    name: 'Mickey 8×8',
+    width: 8,
+    height: 8,
+    pixels,
+    thumbnail: '',
+  }
+}
+
 export const useImageStore = defineStore('images', () => {
-  const images = ref<ImageAsset[]>([createSmiley(), createGradient(), createChecker()])
+  const images = ref<ImageAsset[]>([createSmiley(), createGradient(), createChecker(), createMickey()])
 
   const selectedImageId = ref<string | null>(null)
 

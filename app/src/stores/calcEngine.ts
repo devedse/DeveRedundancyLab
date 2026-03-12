@@ -33,6 +33,22 @@ export interface FormulaLine {
   delay: number
 }
 
+/** A single row in the binary bit visualization. */
+export interface BitRow {
+  label: string           // e.g., "D0", "P", "g¹·D1"
+  value: number | null    // byte value (null = missing)
+  coeff?: number          // GF coefficient (for Q/RS)
+  product?: number        // coeff * value in GF(2⁸)
+  isResult?: boolean      // render with highlight
+  isSeparator?: boolean   // render as "────" divider line
+}
+
+/** The full binary visualization block for the CalcEngine panel. */
+export interface BinaryVisualization {
+  title: string
+  rows: BitRow[]
+}
+
 export const useCalcEngineStore = defineStore('calcEngine', () => {
   const visible = ref(false)
   const pinned = ref(false)
@@ -42,6 +58,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
   const formulaLines = ref<FormulaLine[]>([])
   const currentLine = ref(-1)
   const outputs = ref<CalcOutput[]>([])
+  const visualization = ref<BinaryVisualization | null>(null)
 
   const stripeIndex = ref(0)
   const bytePosition = ref(0)
@@ -71,6 +88,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
     calcInputs: CalcInput[],
     lines: FormulaLine[],
     calcOutputs: CalcOutput[],
+    viz?: BinaryVisualization | null,
   ) {
     mode.value = 'hover'
     stripeIndex.value = stripe
@@ -79,6 +97,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
     formulaLines.value = lines
     currentLine.value = lines.length - 1 // Show all lines instantly
     outputs.value = calcOutputs
+    visualization.value = viz ?? null
     visible.value = true
   }
 
@@ -89,6 +108,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
     formulaLines.value = []
     currentLine.value = -1
     outputs.value = []
+    visualization.value = null
     visible.value = false
   }
 
@@ -98,6 +118,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
     mode.value = 'idle'
     inputs.value = []
     formulaLines.value = []
+    visualization.value = null
     currentLine.value = -1
     outputs.value = []
     stripeIndex.value = 0
@@ -118,6 +139,7 @@ export const useCalcEngineStore = defineStore('calcEngine', () => {
     setFormula,
     advanceLine,
     setOutputs,
+    visualization,
     showForHover,
     clear,
     $reset,

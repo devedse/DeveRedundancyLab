@@ -174,7 +174,7 @@ watch(
 <template>
   <canvas
     ref="canvasRef"
-    class="pixel-render w-full rounded cursor-crosshair"
+    class="pixel-render w-full h-auto rounded cursor-crosshair"
     @mousemove="onMouseMove"
     @click="onClick"
   />

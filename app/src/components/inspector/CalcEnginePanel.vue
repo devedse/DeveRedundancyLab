@@ -10,7 +10,7 @@ const calcEngine = useCalcEngineStore()
 <template>
   <div
     class="calc-engine border-t border-border bg-surface-1 transition-all duration-200"
-    :class="calcEngine.visible ? 'h-44' : 'h-9'"
+    :class="calcEngine.visible ? 'h-80' : 'h-9'"
   >
     <!-- Title bar (always visible) -->
     <div
@@ -54,18 +54,19 @@ const calcEngine = useCalcEngineStore()
       class="flex items-stretch gap-4 px-4 pb-3 h-[calc(100%-36px)] overflow-hidden"
     >
       <!-- Input Slots -->
-      <InputSlots :inputs="calcEngine.inputs" class="w-48 shrink-0" />
+      <InputSlots :inputs="calcEngine.inputs" class="w-48 shrink" />
 
       <!-- Formula Area -->
       <FormulaDisplay
         :lines="calcEngine.formulaLines"
         :current-line="calcEngine.currentLine"
         :mode="calcEngine.mode"
+        :visualization="calcEngine.visualization"
         class="flex-1 min-w-0"
       />
 
       <!-- Output Slots -->
-      <OutputSlots :outputs="calcEngine.outputs" class="w-40 shrink-0" />
+      <OutputSlots :outputs="calcEngine.outputs" class="w-48 shrink" />
     </div>
   </div>
 </template>
