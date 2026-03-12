@@ -18,21 +18,21 @@ function act(action: string) {
 <template>
   <div class="flex items-center justify-center gap-1 px-1 py-1.5 border-t border-border/50">
     <button
-      v-if="status === 'healthy' || status === 'degraded' || status === 'corrupted'"
+      v-if="status !== 'failed' && status !== 'empty' && status !== 'rebuilding'"
       class="action-btn"
       title="Remove Disk"
       @click="act('remove')"
     >💀</button>
 
     <button
-      v-if="status === 'healthy' || status === 'corrupted'"
+      v-if="status !== 'failed' && status !== 'empty' && status !== 'rebuilding'"
       class="action-btn"
       title="Wipe Disk"
       @click="act('wipe')"
     >🧹</button>
 
     <button
-      v-if="status === 'healthy'"
+      v-if="status !== 'failed' && status !== 'empty' && status !== 'rebuilding'"
       class="action-btn"
       title="Cosmic Ray"
       @click="act('cosmic')"

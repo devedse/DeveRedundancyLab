@@ -51,13 +51,11 @@ export const useDiskStore = defineStore('disks', () => {
     disk.status = 'failed'
   }
 
-  /** Re-add a failed disk as empty. */
+  /** Re-add a failed disk with its data intact. */
   function readdDisk(diskId: number) {
     const disk = disks.value[diskId]
     if (!disk) return
-    disk.status = 'empty'
-    disk.pixels = new Uint8Array(disk.pixels.length)
-    disk.corruptedPixels.clear()
+    disk.status = disk.corruptedPixels.size > 0 ? 'corrupted' : 'healthy'
   }
 
   /** Wipe a disk (zeros but stays in array). */
@@ -73,8 +71,10 @@ export const useDiskStore = defineStore('disks', () => {
   function flipBits(diskId: number, pixelIndex: number, mask: number) {
     const disk = disks.value[diskId]
     if (!disk || pixelIndex >= disk.pixels.length) return
-    disk.pixels[pixelIndex] ^= mask
-    disk.corruptedPixels.add(pixelIndex)
+    const updated = disk.pixels.slice()
+    updated[pixelIndex] ^= mask
+    disk.pixels = updated
+    disk.corruptedPixels = new Set(disk.corruptedPixels).add(pixelIndex)
     if (disk.status === 'healthy') {
       disk.status = 'corrupted'
     }

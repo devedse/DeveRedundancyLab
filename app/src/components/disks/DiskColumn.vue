@@ -83,13 +83,21 @@ function handleAction(action: string, diskId: number) {
     case 'wipe':
       diskStore.wipeDisk(diskId)
       break
-    case 'cosmic':
-      if (diskStore.disks[diskId].pixels.length > 0) {
-        const pixelIdx = Math.floor(Math.random() * diskStore.disks[diskId].pixels.length)
+    case 'cosmic': {
+      const disk = diskStore.disks[diskId]
+      if (disk.pixels.length > 0) {
+        // Pick a pixel that hasn't been corrupted yet
+        const uncorrupted: number[] = []
+        for (let i = 0; i < disk.pixels.length; i++) {
+          if (!disk.corruptedPixels.has(i)) uncorrupted.push(i)
+        }
+        const pool = uncorrupted.length > 0 ? uncorrupted : Array.from({ length: disk.pixels.length }, (_, i) => i)
+        const pixelIdx = pool[Math.floor(Math.random() * pool.length)]
         const mask = 1 << Math.floor(Math.random() * 8)
         diskStore.flipBits(diskId, pixelIdx, mask)
       }
       break
+    }
     case 'readd':
       diskStore.readdDisk(diskId)
       break
