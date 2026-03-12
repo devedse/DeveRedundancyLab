@@ -5,11 +5,11 @@ import { gfAdd, gfMul, gfPow } from './gf256'
 import type { StripeLayout, StripeUnit } from './types'
 
 /**
- * Compute RAID 5 stripe layout (left-symmetric parity rotation).
- * For stripe i with N total disks, parity sits on disk (N - 1 - (i % N)).
+ * Compute RAID 5 stripe layout (fixed parity on last disk).
+ * Parity always sits on disk N-1 for easier visualization.
  */
-export function raid5Layout(totalDisks: number, stripeIndex: number): StripeLayout {
-  const parityP = totalDisks - 1 - (stripeIndex % totalDisks)
+export function raid5Layout(totalDisks: number, _stripeIndex: number): StripeLayout {
+  const parityP = totalDisks - 1
   const dataDisks: number[] = []
   for (let d = 0; d < totalDisks; d++) {
     if (d !== parityP) dataDisks.push(d)
@@ -18,12 +18,12 @@ export function raid5Layout(totalDisks: number, stripeIndex: number): StripeLayo
 }
 
 /**
- * Compute RAID 6 stripe layout.
- * P on disk (N-1 - (i % N)), Q on the next position (wrapping).
+ * Compute RAID 6 stripe layout (fixed parity on last two disks).
+ * P on disk N-2, Q on disk N-1 for easier visualization.
  */
-export function raid6Layout(totalDisks: number, stripeIndex: number): StripeLayout {
-  const parityP = totalDisks - 1 - (stripeIndex % totalDisks)
-  const parityQ = (parityP + 1) % totalDisks
+export function raid6Layout(totalDisks: number, _stripeIndex: number): StripeLayout {
+  const parityP = totalDisks - 2
+  const parityQ = totalDisks - 1
   const dataDisks: number[] = []
   for (let d = 0; d < totalDisks; d++) {
     if (d !== parityP && d !== parityQ) dataDisks.push(d)

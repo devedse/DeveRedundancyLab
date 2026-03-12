@@ -3,7 +3,8 @@ import { useVolumeStore } from '@/stores/volume'
 import { useDiskStore } from '@/stores/disks'
 import { useImageStore } from '@/stores/images'
 import DiskColumn from './DiskColumn.vue'
-import { distributeImage } from '@/composables/useDistribution'
+import { distributeImage, computeDistributionPlan } from '@/composables/useDistribution'
+import { animateDistribution } from '@/composables/useAnimation'
 
 const volume = useVolumeStore()
 const diskStore = useDiskStore()
@@ -16,7 +17,7 @@ function onDragOver(event: DragEvent) {
   }
 }
 
-function onDrop(event: DragEvent) {
+async function onDrop(event: DragEvent) {
   event.preventDefault()
   const imageId = event.dataTransfer?.getData('application/x-image-id')
   if (!imageId) return
@@ -24,7 +25,12 @@ function onDrop(event: DragEvent) {
   const image = imageStore.images.find(img => img.id === imageId)
   if (!image) return
 
-  distributeImage(image, volume, diskStore)
+  if (volume.autoAnimate) {
+    const plan = computeDistributionPlan(image, volume)
+    await animateDistribution(plan, diskStore, volume, image.id, volume.animationSpeed)
+  } else {
+    distributeImage(image, volume, diskStore)
+  }
 }
 </script>
 

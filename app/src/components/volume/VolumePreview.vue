@@ -4,6 +4,7 @@ import { useVolumeStore } from '@/stores/volume'
 import { useDiskStore } from '@/stores/disks'
 import { useImageStore } from '@/stores/images'
 import { byteToRgb } from '@/utils/palette'
+import { readVolumePixels } from '@/composables/useRecovery'
 
 const volume = useVolumeStore()
 const diskStore = useDiskStore()
@@ -41,50 +42,24 @@ function renderPixelsToCanvas(
 function updatePreviews() {
   if (!volume.populated) return
 
-  // Find the source image (use first image for now — will be refined with distribution tracking)
-  const sourceImage = imageStore.images[0]
+  const sourceImage = imageStore.images.find(img => img.id === volume.sourceImageId)
   if (!sourceImage) return
 
   const { width, height } = sourceImage
-  const totalPixels = width * height
 
   // Render original
   renderPixelsToCanvas(originalCanvas.value, sourceImage.pixels, width, height)
 
-  // Build "on disk" image: gather pixels from healthy disks, black for failed
-  const onDiskPixels = new Uint8Array(totalPixels)
-  const reconstructedPixels = new Uint8Array(totalPixels)
-  let matching = 0
-  let missing = 0
+  // Read back from disks and reconstruct
+  const { onDisk, reconstructed, stats } = readVolumePixels()
+  diffStats.value = stats
 
-  // Simple reconstruction: just show disk data as-is
-  // Full stripe-aware reconstruction will be added with the distribution composable
-  for (const disk of diskStore.disks) {
-    if (disk.status === 'failed') {
-      missing += disk.pixels.length
-      continue
-    }
-    // Pixel data on each disk will be indexed by stripe position later
-    // For now, track what we have
-  }
-
-  void onDiskPixels
-  void reconstructedPixels
-  void matching
-
-  diffStats.value = {
-    total: totalPixels,
-    matching: totalPixels - missing,
-    missing,
-    corrupted: 0,
-  }
-
-  renderPixelsToCanvas(onDiskCanvas.value, onDiskPixels, width, height)
-  renderPixelsToCanvas(reconstructedCanvas.value, reconstructedPixels, width, height)
+  renderPixelsToCanvas(onDiskCanvas.value, onDisk, width, height)
+  renderPixelsToCanvas(reconstructedCanvas.value, reconstructed, width, height)
 }
 
 watch(
-  () => [volume.populated, diskStore.disks.map(d => d.status)],
+  () => [volume.populated, diskStore.disks.map(d => [d.status, d.pixels])],
   updatePreviews,
   { deep: true },
 )

@@ -18,6 +18,9 @@ export const useVolumeStore = defineStore('volume', () => {
   /** True when image data has been distributed to disks. */
   const populated = ref(false)
 
+  /** ID of the image currently distributed to the volume. */
+  const sourceImageId = ref<string | null>(null)
+
   function setAlgorithm(algo: Algorithm) {
     algorithm.value = algo
     // Enforce parity constraints per algorithm
@@ -41,6 +44,7 @@ export const useVolumeStore = defineStore('volume', () => {
     animationSpeed.value = 1
     autoAnimate.value = true
     populated.value = false
+    sourceImageId.value = null
   }
 
   return {
@@ -55,6 +59,7 @@ export const useVolumeStore = defineStore('volume', () => {
     totalDisks,
     stripeWidth,
     populated,
+    sourceImageId,
     setAlgorithm,
     $reset,
   }
